@@ -23,5 +23,17 @@
 #include <opencv/cvaux.hpp>
 #include <vector>
 
+const char *source = "/Users/caojingchen/proj/cpp/Playground/Playground/map.xml";
+
+pugi::xml_document shmap;
+double minlat,minlon,maxlat,maxlon;
+
+typedef std::pair<uint32_t,uint32_t> point;
+std::map<uint32_t,point> points;
+
+char map_window[] = "Draw a simple map";
+int pixel_size;
+double zoom_scale;
+cv::Mat map_image;
 
 #endif /* streetmap_all_h */
