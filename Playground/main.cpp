@@ -88,9 +88,9 @@ void output()
 {
     //rotate90(map_image);
     cv::flip(map_image,map_image,0);
-    cv::imshow( map_window, map_image );
-    //cv::moveWindow( map_window, 0, 600 );
-    cv::waitKey();
+    cv::imwrite( path, map_image );
+    //cv::imshow( map_window, map_image );
+    //cv::waitKey();
 }
 
 int main()
@@ -119,8 +119,7 @@ int main()
         }
     }
     points.clear();
-    output();
-    
+    output();    
     
     return 0;
 }

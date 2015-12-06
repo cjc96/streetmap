@@ -367,9 +367,9 @@
 		063F30B61A3AE05B00A31AD6 /* Playground */ = {
 			isa = PBXGroup;
 			children = (
-				063F30B71A3AE05B00A31AD6 /* main.cpp */,
-				061FCEB11C11204500BF9FA7 /* map_const.h */,
 				06E787991C1068E1009B0DFF /* streetmap_all.h */,
+				061FCEB11C11204500BF9FA7 /* map_const.h */,
+				063F30B71A3AE05B00A31AD6 /* main.cpp */,
 			);
 			path = Playground;
 			sourceTree = "<group>";

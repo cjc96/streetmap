@@ -23,8 +23,6 @@
 #include <opencv/cvaux.hpp>
 #include <vector>
 
-const char *source = "/Users/caojingchen/proj/cpp/Playground/Playground/map.xml";
-
 pugi::xml_document shmap;
 double minlat,minlon,maxlat,maxlon;
 
