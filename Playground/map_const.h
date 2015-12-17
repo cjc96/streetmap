@@ -10,10 +10,13 @@
 #define map_const_h
 
 #define BIGINT 10000000
-#define SIZE_ON_SCREEN 5000
-#define BLANK cv::Scalar(226,234,237)
+#define SIZE_ON_SCREEN 12000
 
-const char *source = "/Users/caojingchen/proj/cpp/streetmap/Playground/map.xml";
-const char *path = "/Users/caojingchen/proj/cpp/streetmap/Playground/map.jpeg";
+#define BLANK cv::Scalar(226, 234, 237)
+#define WHITE cv::Scalar(255, 255, 255)
+#define BLACK cv::Scalar(0, 0, 0)
+
+extern const char *source ;
+extern const char *path ;
 
 #endif /* map_const_h */

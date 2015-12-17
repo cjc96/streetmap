@@ -23,15 +23,19 @@
 #include <opencv/cvaux.hpp>
 #include <vector>
 
-pugi::xml_document shmap;
-double minlat,minlon,maxlat,maxlon;
-
 typedef std::pair<uint32_t,uint32_t> point;
-std::map<uint32_t,point> points;
 
-char map_window[] = "Draw a simple map";
-int pixel_size;
-double zoom_scale;
-cv::Mat map_image;
+extern pugi::xml_document shmap;
+extern double minlat,minlon,maxlat,maxlon;
+
+extern point points[510000];
+extern std::map<uint32_t,uint32_t> points_map;
+extern int points_num;
+
+extern char map_window[];
+extern int pixel_size;
+extern double zoom_scale;
+extern cv::Mat map_image;
+
 
 #endif /* streetmap_all_h */
