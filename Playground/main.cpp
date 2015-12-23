@@ -13,9 +13,13 @@
 pugi::xml_document shmap;
 double minlat,minlon,maxlat,maxlon;
 
-point points[510000];
+points_info points[510000];
+point points_origin[510000];
+std::vector<std::pair<std::string, pugi::xml_node> > points_name;
 std::map<uint32_t,uint32_t> points_map;
 int points_num;
+std::vector<double> road_infoa[510000];
+std::vector<uint32_t> road_infob[510000];
 
 char map_window[] = "Draw a simple map";
 int pixel_size;
@@ -23,12 +27,13 @@ double zoom_scale;
 cv::Mat map_image;
 
 const char *source = "/Users/caojingchen/proj/cpp/streetmap/Playground/shanghai_map.xml";
-const char *path = "/Users/caojingchen/proj/cpp/streetmap/Playground/shanghai_map.jpeg";
+const char *path = "/Users/caojingchen/proj/cpp/streetmap/Playground/map.jpeg";
 
 int init();
 void output();
 void find_name(char *);
-void find_way(point, point);
+void find_way(uint32_t, uint32_t);
+void find_taxi(char *);
 
 int main()
 {
@@ -38,9 +43,19 @@ int main()
     while (1)
     {
         int opcode;
-        printf("Please input an opcode.\n0 : exit\n1 : request a name\n2:request short paths\n");
+        printf("Please input an opcode.\n");
+        printf("0 : initial\n");
+        printf("1 : request a name\n");
+        printf("2 : request the shortest path\n");
+        printf("3 : request kth nearest points\n");
+        printf("4 : request a range\n");
+        printf("5 : show taxi route\n");
+        printf("others : quit\n");
         scanf("%d", &opcode);
-        if (opcode == 1)
+        
+        if (opcode == 0)
+            init();
+        else if (opcode == 1)
         {
             char temp[100];
             
@@ -50,16 +65,33 @@ int main()
         }
         else if (opcode == 2)
         {
-            double temp1, temp2;
-            point start, end;
+            uint32_t temp;
+            uint32_t start, end;
             
-            printf("Please input start point's location(lat, lon):");
-            scanf("%lf %lf",&temp1, &temp2);
-            start = std::make_pair((temp1 - minlat) * BIGINT / zoom_scale, (temp2 - minlon) * BIGINT / zoom_scale);
-            printf("Please input end point's location(lat, lon):");
-            scanf("%lf %lf",&temp1, &temp2);
-            end = std::make_pair((temp1 - minlat) * BIGINT / zoom_scale, (temp2 - minlon) * BIGINT / zoom_scale);
+            printf("Please input start point's id:");
+            scanf("%d", &temp);
+            start = points_map[temp];
+            printf("Please input end point's id:");
+            scanf("%d",&temp);
+            end = points_map[temp];
             find_way(start, end);
+        }
+        else if (opcode == 3)
+        {
+            
+        }
+        else if (opcode == 4)
+        {
+            
+        }
+        else if (opcode == 5)
+        {
+            char taxi_label[30];
+            
+            printf("Please input taxi number:\n");
+            scanf("%s", taxi_label);
+            find_taxi(taxi_label);
+            init();
         }
         else
         {
