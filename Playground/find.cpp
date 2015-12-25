@@ -22,7 +22,10 @@ void map_pause()
         if (temp_key == 'y')
             return;
         else if (temp_key == 'n')
+        {
+            system("clear");
             exit(0);
+        }
     }
 }
 
@@ -45,6 +48,8 @@ void find_name(char *str)
     if (temp_start == temp_end)
     {
         printf("Nothing found.\n");
+        output();
+        map_pause();
     }
     else
     {
@@ -243,22 +248,22 @@ double asses(uint32_t x, uint32_t y)
     return std::sqrt((temp_x.first - temp_y.first) * (temp_x.first - temp_y.first) + (temp_x.second - temp_y.second) * (temp_x.second - temp_y.second));
 }
 
-void astar(uint32_t s, uint32_t end, double g[], time_t *running_time)
+void astar(uint32_t s, uint32_t end, double g[], time_t *running_time, bool dijk)
 {
-    static bool open_set[510000], closed_set[510000];
+    static short open_set[510000], closed_set[510000];
     static std::pair<double, uint32_t> d[510000]; // heap
     static uint32_t former_ans[510000];
-    static int h[510000],f[510000];
+    static double h[510000],f[510000];
     int open_len = points_num, closed_len = 0, d_len = 0;
     
-    memset(open_set, 1, sizeof(open_set));
+    memset(open_set, 0, sizeof(open_set));
     memset(former_ans, 0, sizeof(former_ans));
     memset(closed_set, 0, sizeof(closed_set));
     memset(d, 0, sizeof(d));
     memset(h, 0, sizeof(h));
     memset(f, 0, sizeof(f));
     g[s] = 0;
-    h[s] = asses(s,end);
+    h[s] = dijk ? 0 : asses(s,end);
     f[s] = h[s];
     d[d_len++] = std::make_pair(f[s], s);
     while (open_len != 0)
@@ -274,21 +279,20 @@ void astar(uint32_t s, uint32_t end, double g[], time_t *running_time)
             return;
         }
         
-        if (open_set[now])
+        if (!open_set[now])
         {
-            open_set[now] = 0;
+            open_set[now] = 1;
             open_len--;
         }
         //else
-          //  continue;
-        
+            //continue;
         if (!closed_set[now])
         {
             closed_set[now] = 1;
             closed_len++;
         }
         //else
-          //  continue;
+            //continue;
         
         for (int i = 0; i < road_infob[now].size(); i++)
         {
@@ -297,10 +301,10 @@ void astar(uint32_t s, uint32_t end, double g[], time_t *running_time)
             
             if (closed_set[y])
                 continue;
-            int tentative_g = g[now] + road_infoa[now][i];
-            if (!open_set[y])
+            double tentative_g = g[now] + road_infoa[now][i];
+            if (open_set[y])
             {
-                open_set[y] = 1;
+                open_set[y] = 0;
                 open_len++;
                 tentative_is_better = 1;
             }
@@ -312,7 +316,7 @@ void astar(uint32_t s, uint32_t end, double g[], time_t *running_time)
             if (tentative_is_better)
             {
                 g[y] = tentative_g;
-                h[y] = asses(y,end);
+                h[y] = dijk ? 0 : asses(y,end);
                 f[y] = g[y] + h[y];
                 d[d_len++] = std::make_pair(f[y], y);
                 push_heap(d, d + d_len, cmp_astar);
@@ -326,34 +330,49 @@ void astar(uint32_t s, uint32_t end, double g[], time_t *running_time)
     output_shortest_way(former_ans, s, end);
 }
 
-void find_way(uint32_t start, uint32_t end)
+void find_way(uint32_t start, uint32_t end, int kth_state)
 {
     double dist[510000];
-    
-    for (int i = 0; i < 510000; i++)
-        dist[i] = 1e+20;
     time_t time_start = clock();
     time_t time_end;
-    spfa(start, end, dist, &time_end);
-    printf("Time consumed(SPFA) : %f\n",(float)(time_end - time_start)/CLOCKS_PER_SEC );
-    printf("Total length : %lf meters\n\n",dist[end] / zoom_scale / BIGINT * 111000);
-    map_pause();
     
-    for (int i = 0; i < 510000; i++)
-        dist[i] = 1e+20;
-    time_start = clock();
-    dijkstra(start, end, dist, &time_end);
-    printf("Time consumed(Dijkstra) : %f\n",(float)(time_end - time_start)/CLOCKS_PER_SEC );
-    printf("Total length : %lf meters\n\n",dist[end] / zoom_scale / BIGINT * 111000);
-    map_pause();
+    if (!kth_state)
+    {
+        for (int i = 0; i < 510000; i++)
+            dist[i] = 1e+20;
+        spfa(start, end, dist, &time_end);
+        printf("Time consumed(SPFA) : %f\n",(float)(time_end - time_start)/CLOCKS_PER_SEC );
+        printf("Total length : %lf meters\n\n",dist[end] * 111000 / zoom_scale / BIGINT);
+        map_pause();
+        
+        for (int i = 0; i < 510000; i++)
+            dist[i] = 1e+20;
+        time_start = clock();
+        //dijkstra(start, end, dist, &time_end);
+        astar(start, end, dist, &time_start, 1);
+        printf("Time consumed(Dijkstra) : %f\n",(float)(time_end - time_start)/CLOCKS_PER_SEC );
+        printf("Total length : %lf meters\n\n",dist[end] * 111000 / zoom_scale / BIGINT);
+        map_pause();
 
-    for (int i = 0; i < 510000; i++)
-        dist[i] = 1e+20;
-    time_start = clock();
-    astar(start, end, dist, &time_end);
-    printf("Time consumed(A*) : %f\n",(float)(time_end - time_start)/CLOCKS_PER_SEC );
-    printf("Total length : %lf meters\n\n",dist[end] / zoom_scale / BIGINT * 111000);
-    map_pause();
+        for (int i = 0; i < 510000; i++)
+            dist[i] = 1e+20;
+        time_start = clock();
+        astar(start, end, dist, &time_end, 0);
+        printf("Time consumed(A*) : %f\n",(float)(time_end - time_start)/CLOCKS_PER_SEC );
+        printf("Total length : %lf meters\n\n",dist[end] * 111000 / zoom_scale / BIGINT);
+        map_pause();
+    }
+    else
+    {
+        for (int i = 0; i < 510000; i++)
+            dist[i] = 1e+20;
+        time_start = clock();
+        //kth_astar(start, end, dist, &time_end, kth_state);
+        printf("Time consumed(A*) : %f\n",(float)(time_end - time_start)/CLOCKS_PER_SEC );
+        printf("Total length : %lf meters\n\n",dist[end] * 111000 / zoom_scale / BIGINT);
+        map_pause();
+    }
+
 }
 
 void find_taxi(char label[])
@@ -434,9 +453,9 @@ void find_taxi(char label[])
                     if (taxi_dist < 3000)
                         payment = 14;
                     else if (taxi_dist < 15000)
-                        payment = 14 + (taxi_dist - 3000) * 2.5;
+                        payment = 14 + (taxi_dist - 3000) / 1000 * 2.5;
                     else
-                        payment = 44 + (taxi_dist - 15000) * 3.6;
+                        payment = 44 + (taxi_dist - 15000) / 1000 * 3.6;
                 
                     printf("Passenger No. %d : %.2lf yuan\n", ++pa_num, payment);
                     cv::circle(map_image, cv::Point(joint2.first, joint2.second), 5, ORANGE, -1);
@@ -455,4 +474,35 @@ void find_taxi(char label[])
     output();
     map_pause();
     fclose(fp);
+}
+
+void find_one_qtree(qtreenode *now, uint32_t requested_lon, uint32_t requested_lat)
+{
+    if (!now->leaf)
+    {
+        uint32_t middle_lon = (now->lower_limit.first + now->upper_limit.first) / 2, middle_lax = (now->lower_limit.second + now->upper_limit.second) / 2;
+        
+        if (requested_lon >= middle_lon && requested_lat >= middle_lax)
+            find_one_qtree(now->son1, requested_lon, requested_lat);
+        else if (requested_lon >= middle_lon && requested_lat < middle_lax)
+            find_one_qtree(now->son2, requested_lon, requested_lat);
+        else if (requested_lon < middle_lon && requested_lat >= middle_lax)
+            find_one_qtree(now->son3, requested_lon, requested_lat);
+        else
+            find_one_qtree(now->son4, requested_lon, requested_lat);
+    }
+    else
+    {
+        point to_draw = points_origin[points_map[now->node_id]];
+        cv::circle(map_image, cv::Point(to_draw.first, to_draw.second), 4, BLUE, -1);
+        printf("Interested point's name : %s\n",&now->anemity_name[0]);
+        output();
+        map_pause();
+        cv::circle(map_image, cv::Point(to_draw.first, to_draw.second), 4, WHITE, -1);
+    }
+}
+
+void find_one_interest(uint32_t requested_lon, uint32_t requeseted_lat)
+{
+    find_one_qtree(&qtree, requested_lon, requeseted_lat);
 }

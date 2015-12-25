@@ -31,7 +31,6 @@
 #include <opencv2/legacy/legacy.hpp>
 #include <opencv/cvaux.hpp>
 
-
 typedef std::pair<uint32_t, uint32_t> point;
 
 typedef struct
@@ -40,6 +39,15 @@ typedef struct
     std::vector<pugi::xml_node> way;
     pugi::xml_node *node;
 } points_info;
+
+struct qtreenode
+{
+    bool leaf;
+    uint32_t node_id;
+    std::string anemity_name;
+    point upper_limit, lower_limit;
+    qtreenode *son1, *son2, *son3, *son4;
+};
 
 extern pugi::xml_document shmap;
 extern double minlat,minlon,maxlat,maxlon;
@@ -57,5 +65,6 @@ extern int pixel_size;
 extern double zoom_scale;
 extern cv::Mat map_image;
 
+extern qtreenode qtree;
 
 #endif /* streetmap_all_h */

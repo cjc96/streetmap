@@ -18,8 +18,11 @@ point points_origin[510000];
 std::vector<std::pair<std::string, pugi::xml_node> > points_name;
 std::map<uint32_t,uint32_t> points_map;
 int points_num;
+
 std::vector<double> road_infoa[510000];
 std::vector<uint32_t> road_infob[510000];
+
+qtreenode qtree;
 
 char map_window[] = "Draw a simple map";
 int pixel_size;
@@ -32,29 +35,35 @@ const char *path = "/Users/caojingchen/proj/cpp/streetmap/Playground/map.jpeg";
 int init();
 void output();
 void find_name(char *);
-void find_way(uint32_t, uint32_t);
+void find_way(uint32_t, uint32_t, int);
 void find_taxi(char *);
+void find_one_interest(uint32_t, uint32_t);
 
 int main()
 {
     init();
     output();
-    
     while (1)
     {
         int opcode;
+        system("clear");
         printf("Please input an opcode.\n");
         printf("0 : initial\n");
         printf("1 : request a name\n");
         printf("2 : request the shortest path\n");
-        printf("3 : request kth nearest points\n");
-        printf("4 : request a range\n");
-        printf("5 : show taxi route\n");
-        printf("others : quit\n");
+        printf("3 : request the kth shortest path\n");
+        printf("4 : request the nearest interested points\n");
+        printf("5 : request interested points within a range\n");
+        printf("6 : show taxi route\n");
+        printf("9 : quit\n");
         scanf("%d", &opcode);
         
         if (opcode == 0)
+        {
             init();
+            output();
+            system("clear");
+        }
         else if (opcode == 1)
         {
             char temp[100];
@@ -74,17 +83,49 @@ int main()
             printf("Please input end point's id:");
             scanf("%d",&temp);
             end = points_map[temp];
-            find_way(start, end);
+            find_way(start, end, 0);
         }
         else if (opcode == 3)
         {
+            uint32_t temp;
+            uint32_t start, end;
+            int kth_state;
             
+            printf("Please input start point's id :");
+            scanf("%u", &temp);
+            start = points_map[temp];
+            printf("Please input end point's id :");
+            scanf("%u",&temp);
+            end = points_map[temp];
+            printf("Please input k :");
+            scanf("%d", &kth_state);
+            find_way(start, end, kth_state);
         }
         else if (opcode == 4)
         {
+            uint32_t temp;
             
+            printf("Please input point's id :");
+            scanf("%u", &temp);
+            point to_request = points_origin[points_map[temp]];
+            find_one_interest(to_request.first, to_request.second);
         }
         else if (opcode == 5)
+        {
+            uint32_t temp;
+            double range_temp;
+            int range;
+            
+            printf("Please input point's id :");
+            scanf("%u", &temp);
+            point to_request = points_origin[points_map[temp]];
+            printf("Please input the range(meter) :");
+            scanf("%lf", &range_temp);
+            range_temp = range_temp / 111000 * BIGINT * zoom_scale;
+            range = range_temp;
+            
+        }
+        else if (opcode == 6)
         {
             char taxi_label[30];
             
@@ -93,7 +134,7 @@ int main()
             find_taxi(taxi_label);
             init();
         }
-        else
+        else if (opcode == 9)
         {
             break;
         }

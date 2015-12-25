@@ -8,6 +8,101 @@
 
 #include "init.hpp"
 
+void set_qtree(qtreenode *dst, bool leaf, uint32_t node_id, char *str, uint32_t lower_lon, uint32_t lower_lat, uint32_t upper_lon, uint32_t upper_lat)
+{
+    dst->leaf = leaf;
+    dst->node_id = node_id;
+    dst->anemity_name = std::string(str);
+    dst->lower_limit.first = lower_lon;
+    dst->lower_limit.second = lower_lat;
+    dst->upper_limit.first = upper_lon;
+    dst->upper_limit.second = upper_lat;
+}
+
+void quatertree_insert(qtreenode *now, uint32_t pointlon, uint32_t pointlax, uint32_t id, char *str)
+{
+    
+    if (!now->leaf)
+    {
+        uint32_t middle_lon = (now->lower_limit.first + now->upper_limit.first) / 2, middle_lax = (now->lower_limit.second + now->upper_limit.second) / 2;
+        
+        if (pointlon >= middle_lon && pointlax >= middle_lax)
+            quatertree_insert(now->son1, pointlon, pointlax, id, str);
+        else if (pointlon >= middle_lon && pointlax < middle_lax)
+            quatertree_insert(now->son2, pointlon, pointlax, id, str);
+        else if (pointlon < middle_lon && pointlax >= middle_lax)
+            quatertree_insert(now->son3, pointlon, pointlax, id, str);
+        else
+            quatertree_insert(now->son4, pointlon, pointlax, id, str);
+    }
+    else
+    {
+        if (now->node_id == 0)
+            set_qtree(now, 1, id, str, now->lower_limit.first, now->lower_limit.second, now->upper_limit.first, now->upper_limit.second);
+        else
+        {
+            uint32_t middle_lon = (now->lower_limit.first + now->upper_limit.first) / 2, middle_lax = (now->lower_limit.second + now->upper_limit.second) / 2;
+            uint32_t now_lon = points_origin[points_map[now->node_id]].first, now_lax = points_origin[points_map[now->node_id]].second;
+            
+            if (now_lon == pointlon && now_lax == pointlax)
+                return;
+            
+            now->leaf = 0;
+            
+            now->son1 = new qtreenode;
+            now->son1->leaf = 1;
+            now->son1->node_id = 0;
+            now->son1->lower_limit.first = middle_lon;
+            now->son1->lower_limit.second = middle_lax;
+            now->son1->upper_limit.first = now->upper_limit.first;
+            now->son1->upper_limit.second = now->upper_limit.second;
+            now->son1->son1 = NULL;
+            now->son1->son2 = NULL;
+            now->son1->son3 = NULL;
+            now->son1->son4 = NULL;
+            
+            now->son2 = new qtreenode;
+            now->son2->leaf = 1;
+            now->son2->node_id = 0;
+            now->son2->lower_limit.first = middle_lon;
+            now->son2->lower_limit.second = now->lower_limit.second;
+            now->son2->upper_limit.first = now->upper_limit.first;
+            now->son2->upper_limit.second = middle_lax;
+            now->son2->son1 = NULL;
+            now->son2->son2 = NULL;
+            now->son2->son3 = NULL;
+            now->son2->son4 = NULL;
+            
+            now->son3 = new qtreenode;
+            now->son3->leaf = 1;
+            now->son2->node_id = 0;
+            now->son3->lower_limit.first = now->lower_limit.first;
+            now->son3->lower_limit.second = middle_lax;
+            now->son3->upper_limit.first = middle_lon;
+            now->son3->upper_limit.second = now->upper_limit.second;
+            now->son3->son1 = NULL;
+            now->son3->son2 = NULL;
+            now->son3->son3 = NULL;
+            now->son3->son4 = NULL;
+            
+            now->son4 = new qtreenode;
+            now->son4->leaf = 1;
+            now->son2->node_id = 0;
+            now->son4->lower_limit.first = now->lower_limit.first;
+            now->son4->lower_limit.second = now->lower_limit.second;
+            now->son4->upper_limit.first = middle_lon;
+            now->son4->upper_limit.second = middle_lax;
+            now->son4->son1 = NULL;
+            now->son4->son2 = NULL;
+            now->son4->son3 = NULL;
+            now->son4->son4 = NULL;
+            
+            quatertree_insert(now, now_lon, now_lax, now->node_id, &(now->anemity_name[0]));
+            quatertree_insert(now, pointlon, pointlax, id, str);
+        }
+    }
+}
+
 bool cmp_points_name(std::pair<std::string, pugi::xml_node> x,std::pair<std::string, pugi::xml_node> y)
 {
     return x.first < y.first;
@@ -35,19 +130,6 @@ bool cmp2(points_info x, points_info y)
         return 1;
     else
         return 0;
-}
-
-void make_kdtree(points_info *start, points_info *end, int temp, int points_time)
-{
-    if (temp > 1)
-    {
-        if (points_time)
-            std::nth_element(start, start + temp / 2, end, cmp1);
-        else
-            std::nth_element(start, start + temp / 2, end, cmp2);
-        make_kdtree(start, start + temp / 2, temp / 2, 1 - points_time);
-        make_kdtree(start + temp/2, end, temp - temp / 2, 1 - points_time);
-    }
 }
 
 void draw_line(cv::Mat img, cv::Point start, cv::Point end, cv::Scalar colour, int thickness)
@@ -84,6 +166,7 @@ void get_bounds(pugi::xml_node *now)
     pixel_size = maxlon - minlon > maxlat - minlat ? (maxlon - minlon) * BIGINT : (maxlat - minlat) * BIGINT;
     zoom_scale = (double)SIZE_ON_SCREEN / pixel_size;
     pixel_size = SIZE_ON_SCREEN;
+    set_qtree(&qtree, 1, 0, "", 0, 0, SIZE_ON_SCREEN, SIZE_ON_SCREEN);
     
     map_initial();
 }
@@ -124,6 +207,12 @@ void get_node(pugi::xml_node *now)
                     points_name.push_back( points_name_temp );
                 }
             }
+            else if (temp_string == "amenity")
+            {
+                std::string amenity_name = temp.attribute("v").as_string();
+            
+                quatertree_insert(&qtree, temp1, temp2, id, &amenity_name[0]);
+            }
         }
     }
 }
@@ -134,6 +223,19 @@ void get_way(pugi::xml_node *now)
     
     pugi::xml_node temp_last = now->last_child();
     uint32_t s1 = -1, s2;
+    bool oneway_state = 0;
+    
+    for (pugi::xml_node temp = now->first_child(); temp != temp_last; temp = temp.next_sibling())
+    {
+        if ((strcmp(temp.name(),"tag") == 0) && (strcmp(temp.attribute("k").as_string(),"oneway") == 0))
+        {
+            if (strcmp(temp.attribute("v").as_string(), "yes") == 0)
+                oneway_state = 1;
+            else
+                oneway_state = 0;
+            break;
+        }
+    }
     
     for (pugi::xml_node temp = now->first_child(); temp != temp_last; temp = temp.next_sibling())
     {
@@ -157,8 +259,11 @@ void get_way(pugi::xml_node *now)
                 double temp_distance = std::sqrt((joint2.first - joint1.first) * (joint2.first - joint1.first) + (joint2.second - joint1.second) * (joint2.second - joint1.second));
                 road_infoa[s1].push_back(temp_distance);
                 road_infob[s1].push_back(s2);
-                road_infoa[s2].push_back(temp_distance);
-                road_infob[s2].push_back(s1);
+                if (!oneway_state)
+                {
+                    road_infoa[s2].push_back(temp_distance);
+                    road_infob[s2].push_back(s1);
+                }
                 
                 draw_line(map_image, cv::Point(joint1.first,joint1.second), cv::Point(joint2.first,joint2.second), RED, 4);
                 joint1 = joint2;
@@ -278,7 +383,7 @@ void init()
     }
     printf("%f\n",(float)(clock() - time)/CLOCKS_PER_SEC );
     
-    time = clock();
+    //time = clock();
     //make_kdtree(points, points + points_num, points_num, 1);
     //printf("%f\n",(float)(clock() - time)/CLOCKS_PER_SEC );
     
