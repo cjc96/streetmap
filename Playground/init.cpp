@@ -8,7 +8,10 @@
 
 #include "init.hpp"
 
-void set_qtree(qtreenode *dst, bool leaf, uint32_t node_id, char *str, uint32_t lower_lon, uint32_t lower_lat, uint32_t upper_lon, uint32_t upper_lat)
+int amenity_num = 0;
+std::pair<uint32_t,std::string> array_amenity[1100];
+
+void set_qtree(qtreenode *dst, bool leaf, uint32_t node_id, std::string str, uint32_t lower_lon, uint32_t lower_lat, uint32_t upper_lon, uint32_t upper_lat)
 {
     dst->leaf = leaf;
     dst->node_id = node_id;
@@ -19,7 +22,36 @@ void set_qtree(qtreenode *dst, bool leaf, uint32_t node_id, char *str, uint32_t 
     dst->upper_limit.second = upper_lat;
 }
 
-void quatertree_insert(qtreenode *now, uint32_t pointlon, uint32_t pointlax, uint32_t id, char *str)
+void quatertree_point_insert(qtreenode *now, uint32_t pointlon, uint32_t pointlat, uint32_t id, std::string str)
+{
+    if (!now->node_id)
+    {
+        now->node_id = id;
+        now->anemity_name = str;
+        now->son1 = new qtreenode;
+        set_qtree(now->son1, 1, 0, std::string(""), 0, 0, 0, 0);
+        now->son2 = new qtreenode;
+        set_qtree(now->son2, 1, 0, std::string(""), 0, 0, 0, 0);
+        now->son3 = new qtreenode;
+        set_qtree(now->son3, 1, 0, std::string(""), 0, 0, 0, 0);
+        now->son4 = new qtreenode;
+        set_qtree(now->son4, 1, 0, std::string(""), 0, 0, 0, 0);
+    }
+    else
+    {
+        point now_point = points_origin[points_map[id]];
+        if (pointlon >= now_point.first && pointlat >= now_point.second)
+            quatertree_point_insert(now->son1, pointlon, pointlat, id, str);
+        else if (pointlon >= now_point.first && pointlat < now_point.second)
+            quatertree_point_insert(now->son2, pointlon, pointlat, id, str);
+        else if (pointlon < now_point.first && pointlat >= now_point.second)
+            quatertree_point_insert(now->son3, pointlon, pointlat, id, str);
+        else
+            quatertree_point_insert(now->son4, pointlon, pointlat, id, str);
+    }
+}
+
+void quatertree_insert(qtreenode *now, uint32_t pointlon, uint32_t pointlax, uint32_t id, std::string str)
 {
     
     if (!now->leaf)
@@ -103,6 +135,71 @@ void quatertree_insert(qtreenode *now, uint32_t pointlon, uint32_t pointlax, uin
     }
 }
 
+bool cmp_amenity(std::pair<uint32_t,std::string> x, std::pair<uint32_t,std::string> y)
+{
+    return points_origin[points_map[x.first]].first < points_origin[points_map[y.first]].first;
+}
+
+bool cmp_kdtree(int x, int y)
+{
+    return interest_point[x].p[sort_dimension] < interest_point[y].p[sort_dimension];
+}
+
+bool buildTree(int x, int depth)
+{
+    int dim = depth % 2;
+    if (kdpoint_number[depth] == 0)
+    {
+        return false;
+    }
+    else if (kdpoint_number[depth] == 1)
+    {
+        kdtree[x].dim = dim;
+        kdtree[x].index = point_set[depth][0];
+        kdtree[x].left = false;
+        kdtree[x].right = false;
+        return true;
+    }
+    sort_dimension = dim;
+    std::sort(point_set[depth], point_set[depth] + kdpoint_number[depth], cmp_kdtree);
+    int mid = kdpoint_number[depth] >> 1;
+    kdtree[x].dim = dim;
+    kdtree[x].index = point_set[depth][mid];
+    kdpoint_number[depth + 1] = 0;
+    for(int i = 0; i < mid; ++i)
+    {
+        point_set[depth + 1][kdpoint_number[depth + 1] ++] = point_set[depth][i];
+    }
+    kdtree[x].left = buildTree(x << 1, depth + 1);
+    kdpoint_number[depth + 1] = 0;
+    for(int i = mid + 1;i < kdpoint_number[depth]; ++i)
+    {
+        point_set[depth + 1][kdpoint_number[depth + 1] ++] = point_set[depth][i];
+    }
+    kdtree[x].right = buildTree((x << 1) + 1, depth + 1);
+    return true;
+}
+
+void make_qtree()
+{
+    //std::sort(array_amenity, array_amenity + amenity_num, cmp_amenity);
+    kdpoint_number[0] = amenity_num;
+    for (int i = 0; i < amenity_num; i++)
+    {
+        uint32_t id = array_amenity[i].first;
+        std::string amenity_name = array_amenity[i].second;
+        point temp = points_origin[points_map[id]];
+        
+        quatertree_insert(&qtree, temp.first, temp.second, id, amenity_name);
+        quatertree_point_insert(&qtree_point, temp.first, temp.second, id, amenity_name);
+        interest_point[i].p[0] = temp.first;
+        interest_point[i].p[1] = temp.second;
+        interest_point[i].name = amenity_name;
+        point_set[0][i] = i;
+    }
+    buildTree(1, 0);
+}
+
 bool cmp_points_name(std::pair<std::string, pugi::xml_node> x,std::pair<std::string, pugi::xml_node> y)
 {
     return x.first < y.first;
@@ -166,7 +263,8 @@ void get_bounds(pugi::xml_node *now)
     pixel_size = maxlon - minlon > maxlat - minlat ? (maxlon - minlon) * BIGINT : (maxlat - minlat) * BIGINT;
     zoom_scale = (double)SIZE_ON_SCREEN / pixel_size;
     pixel_size = SIZE_ON_SCREEN;
-    set_qtree(&qtree, 1, 0, "", 0, 0, SIZE_ON_SCREEN, SIZE_ON_SCREEN);
+    set_qtree(&qtree, 1, 0, std::string(""), 0, 0, SIZE_ON_SCREEN, SIZE_ON_SCREEN);
+    set_qtree(&qtree_point, 1, 0, std::string(""), 0, 0, SIZE_ON_SCREEN, SIZE_ON_SCREEN);
     
     map_initial();
 }
@@ -211,7 +309,7 @@ void get_node(pugi::xml_node *now)
             {
                 std::string amenity_name = temp.attribute("v").as_string();
             
-                quatertree_insert(&qtree, temp1, temp2, id, &amenity_name[0]);
+                array_amenity[amenity_num++] = std::make_pair(id, amenity_name);
             }
         }
     }
@@ -322,7 +420,6 @@ void redraw(pugi::xml_node *now)
 void output()
 {
     cv::Mat show_image;
-    //rotate90(map_image);
     cv::flip(map_image, show_image, 0);
     cv::imwrite(path, show_image);
     //system("open /Users/caojingchen/proj/cpp/streetmap/Playground/map.jpeg");
@@ -381,14 +478,14 @@ void init()
             xml_flag = 0;
         redraw(&now);
     }
-    printf("%f\n",(float)(clock() - time)/CLOCKS_PER_SEC );
+    printf("%f\n",(float)(clock() - time) / CLOCKS_PER_SEC );
     
-    //time = clock();
-    //make_kdtree(points, points + points_num, points_num, 1);
-    //printf("%f\n",(float)(clock() - time)/CLOCKS_PER_SEC );
+    time = clock();
+    make_qtree();
+    printf("%f\n",(float)(clock() - time) / CLOCKS_PER_SEC );
     
     time = clock();
     std::sort(points_name.begin(), points_name.end(), cmp_points_name);
-    printf("%f\n",(float)(clock() - time)/CLOCKS_PER_SEC );
-
+    printf("%f\n",(float)(clock() - time) / CLOCKS_PER_SEC );
+    
 }

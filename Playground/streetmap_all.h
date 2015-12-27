@@ -33,6 +33,23 @@
 
 typedef std::pair<uint32_t, uint32_t> point;
 
+struct kdtreenode
+{
+    int dim, index;
+    bool left, right;
+};
+
+struct asses_node
+{
+    double f, g;
+    uint32_t v;
+    asses_node(int a, int b,int c):f(a),g(b),v(c){}
+    bool operator < (const asses_node& a) const
+    {
+        return a.f < f;
+    }
+};
+
 typedef struct
 {
     point loc;
@@ -47,6 +64,12 @@ struct qtreenode
     std::string anemity_name;
     point upper_limit, lower_limit;
     qtreenode *son1, *son2, *son3, *son4;
+};
+
+struct kdpoint
+{
+    uint32_t p[2];
+    std::string name;
 };
 
 extern pugi::xml_document shmap;
@@ -66,5 +89,12 @@ extern double zoom_scale;
 extern cv::Mat map_image;
 
 extern qtreenode qtree;
+extern qtreenode qtree_point;
+extern kdtreenode kdtree[1100];
+extern kdpoint interest_point[1100];
+extern int kdpoint_number[20];
+extern int point_set[20][1100];
+extern int sort_dimension;
+extern std::set<kdpoint> kdans;
 
 #endif /* streetmap_all_h */

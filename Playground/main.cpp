@@ -23,6 +23,13 @@ std::vector<double> road_infoa[510000];
 std::vector<uint32_t> road_infob[510000];
 
 qtreenode qtree;
+qtreenode qtree_point;
+kdtreenode kdtree[1100];
+kdpoint interest_point[1100];
+int point_set[20][1100];
+int kdpoint_number[20];
+int sort_dimension;
+std::set<kdpoint> kdans;
 
 char map_window[] = "Draw a simple map";
 int pixel_size;
@@ -38,11 +45,13 @@ void find_name(char *);
 void find_way(uint32_t, uint32_t, int);
 void find_taxi(char *);
 void find_one_interest(uint32_t, uint32_t);
+void find_range(uint32_t, uint32_t);
 
 int main()
 {
     init();
     output();
+    system("open /Users/caojingchen/proj/cpp/streetmap/Playground/map.jpeg");
     while (1)
     {
         int opcode;
@@ -113,17 +122,11 @@ int main()
         else if (opcode == 5)
         {
             uint32_t temp;
-            double range_temp;
-            int range;
             
             printf("Please input point's id :");
             scanf("%u", &temp);
             point to_request = points_origin[points_map[temp]];
-            printf("Please input the range(meter) :");
-            scanf("%lf", &range_temp);
-            range_temp = range_temp / 111000 * BIGINT * zoom_scale;
-            range = range_temp;
-            
+            find_range(to_request.first, to_request.second);
         }
         else if (opcode == 6)
         {

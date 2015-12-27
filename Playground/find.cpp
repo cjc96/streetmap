@@ -63,7 +63,7 @@ void find_name(char *str)
             {
                 uint32_t temp_points_loc = points_map[now.attribute("id").as_uint()];
                 point temp_point = points_origin[temp_points_loc];
-                cv::circle(map_image, cv::Point(temp_point.first, temp_point.second), 2, BLUE);
+                cv::circle(map_image, cv::Point(temp_point.first, temp_point.second), 2, BLUE, -1);
             }
             else
             {
@@ -102,7 +102,7 @@ void find_name(char *str)
             {
                 uint32_t temp_points_loc = points_map[now.attribute("id").as_uint()];
                 point temp_point = points_origin[temp_points_loc];
-                cv::circle(map_image, cv::Point(temp_point.first, temp_point.second), 2, WHITE);
+                cv::circle(map_image, cv::Point(temp_point.first, temp_point.second), 2, WHITE, -1);
             }
             else
             {
@@ -330,6 +330,36 @@ void astar(uint32_t s, uint32_t end, double g[], time_t *running_time, bool dijk
     output_shortest_way(former_ans, s, end);
 }
 
+double A_Star(double *dist, uint32_t start,uint32_t end, int k)
+{
+    std::priority_queue<asses_node> asses_que;
+    static uint32_t former_ans[510000];
+    static int cnt[510000];
+    
+    memset(cnt, 0, sizeof(cnt));
+    memset(former_ans, 0, sizeof(former_ans));
+    asses_que.push(asses_node(dist[start],0,start));
+    asses_node next(0,0,0);
+    while(!asses_que.empty())
+    {
+        asses_node now = asses_que.top();
+        asses_que.pop();
+        cnt[now.v]++;
+        if(cnt[end] == k)
+            return now.f;
+        if(cnt[now.v] > k)
+            continue;
+        for(int i = 0; i < road_infob[now.v].size(); i++)
+        {
+            next.v = road_infob[now.v][i];
+            next.g = now.g + road_infoa[now.v][i];
+            next.f = next.g + dist[next.v];
+            asses_que.push(next);
+        }
+    }
+    return -1;
+}
+
 void find_way(uint32_t start, uint32_t end, int kth_state)
 {
     double dist[510000];
@@ -349,7 +379,7 @@ void find_way(uint32_t start, uint32_t end, int kth_state)
             dist[i] = 1e+20;
         time_start = clock();
         //dijkstra(start, end, dist, &time_end);
-        astar(start, end, dist, &time_start, 1);
+        astar(start, end, dist, &time_end, 1);
         printf("Time consumed(Dijkstra) : %f\n",(float)(time_end - time_start)/CLOCKS_PER_SEC );
         printf("Total length : %lf meters\n\n",dist[end] * 111000 / zoom_scale / BIGINT);
         map_pause();
@@ -367,9 +397,10 @@ void find_way(uint32_t start, uint32_t end, int kth_state)
         for (int i = 0; i < 510000; i++)
             dist[i] = 1e+20;
         time_start = clock();
-        //kth_astar(start, end, dist, &time_end, kth_state);
+        astar(start, end, dist, &time_end, 1);
+        printf("The kth shortest length is %lf\n",A_Star(dist, start, end, kth_state) * 111000 / zoom_scale / BIGINT / 2);
+        time_end = clock();
         printf("Time consumed(A*) : %f\n",(float)(time_end - time_start)/CLOCKS_PER_SEC );
-        printf("Total length : %lf meters\n\n",dist[end] * 111000 / zoom_scale / BIGINT);
         map_pause();
     }
 
@@ -480,18 +511,18 @@ void find_one_qtree(qtreenode *now, uint32_t requested_lon, uint32_t requested_l
 {
     if (!now->leaf)
     {
-        uint32_t middle_lon = (now->lower_limit.first + now->upper_limit.first) / 2, middle_lax = (now->lower_limit.second + now->upper_limit.second) / 2;
+        uint32_t middle_lon = (now->lower_limit.first + now->upper_limit.first) / 2, middle_lat = (now->lower_limit.second + now->upper_limit.second) / 2;
         
-        if (requested_lon >= middle_lon && requested_lat >= middle_lax)
+        if (requested_lon >= middle_lon && requested_lat >= middle_lat)
             find_one_qtree(now->son1, requested_lon, requested_lat);
-        else if (requested_lon >= middle_lon && requested_lat < middle_lax)
+        else if (requested_lon >= middle_lon && requested_lat < middle_lat)
             find_one_qtree(now->son2, requested_lon, requested_lat);
-        else if (requested_lon < middle_lon && requested_lat >= middle_lax)
+        else if (requested_lon < middle_lon && requested_lat >= middle_lat)
             find_one_qtree(now->son3, requested_lon, requested_lat);
         else
             find_one_qtree(now->son4, requested_lon, requested_lat);
     }
-    else
+    /*else
     {
         point to_draw = points_origin[points_map[now->node_id]];
         cv::circle(map_image, cv::Point(to_draw.first, to_draw.second), 4, BLUE, -1);
@@ -499,10 +530,169 @@ void find_one_qtree(qtreenode *now, uint32_t requested_lon, uint32_t requested_l
         output();
         map_pause();
         cv::circle(map_image, cv::Point(to_draw.first, to_draw.second), 4, WHITE, -1);
+    }*/
+}
+
+void find_one_qtree_point(qtreenode *now, uint32_t requested_lon, uint32_t requested_lat)
+{
+    if (now->node_id)
+    {
+        qtreenode *temp;
+        uint32_t middle_lon = points_origin[points_map[now->node_id]].first, middle_lat = points_origin[points_map[now->node_id]].second;
+        
+        if (middle_lat == requested_lat && middle_lon == requested_lon)
+        {
+            /*point to_draw = points_origin[points_map[now->node_id]];
+            cv::circle(map_image, cv::Point(to_draw.first, to_draw.second), 4, BLUE, -1);
+            printf("Interested point's name : %s\n",&now->anemity_name[0]);
+            output();
+            map_pause();
+            cv::circle(map_image, cv::Point(to_draw.first, to_draw.second), 4, WHITE, -1);*/
+            return;
+        }
+        if (requested_lon >= middle_lon && requested_lat >= middle_lat)
+            temp = now->son1;
+        else if (requested_lon >= middle_lon && requested_lat < middle_lat)
+            temp = now->son2;
+        else if (requested_lon < middle_lon && requested_lat >= middle_lat)
+            temp = now->son3;
+        else
+            temp = now->son4;
     }
 }
 
-void find_one_interest(uint32_t requested_lon, uint32_t requeseted_lat)
+kdpoint search_point;
+bool operator < (const kdpoint &a, const kdpoint &b)
 {
-    find_one_qtree(&qtree, requested_lon, requeseted_lat);
+    return (a.p[0] - search_point.p[0]) * (a.p[0] - search_point.p[0]) + (a.p[1] - search_point.p[1]) * (a.p[1] - search_point.p[1]) < (b.p[0] - search_point.p[0]) * (b.p[0] - search_point.p[0]) + (b.p[1] - search_point.p[1]) * (b.p[1] - search_point.p[1]);
+}
+
+void find_kdtree(int x, uint32_t request_lon, uint32_t request_lat)
+{
+    kdpoint temp_add_ans = interest_point[kdtree[x].index];
+    kdans.insert(temp_add_ans);
+    if (kdans.size() > 10)
+    {
+        std::set<kdpoint>::reverse_iterator it = kdans.rbegin();
+        kdans.erase(*it);
+    }
+    
+    if(!kdtree[x].left && !kdtree[x].right)
+    {
+        return;
+    }
+    
+    bool search_flag = false;
+    
+    search_point.p[0] = request_lon; search_point.p[1] = request_lat;
+    int dist1 = search_point.p[kdtree[x].dim] - interest_point[kdtree[x].index].p[kdtree[x].dim];
+    dist1 *= dist1;
+    if (search_point.p[kdtree[x].dim] < interest_point[kdtree[x].index].p[kdtree[x].dim])
+    {
+        if (kdtree[x].left)
+        {
+            find_kdtree(x << 1, request_lon, request_lat);
+        }
+        if(kdtree[x].right)
+        {
+            if (kdans.size() < 10)
+            {
+                search_flag = true;
+            }
+            else
+            {
+                std::set<kdpoint>::reverse_iterator it = kdans.rbegin();
+                kdpoint temp = *it;
+                int dist2 = (temp.p[0] - search_point.p[0]) * (temp.p[0] - search_point.p[0]) + (temp.p[1] - search_point.p[1]) * (temp.p[1] - search_point.p[1]);
+                if (dist1 <= dist2)
+                {
+                    search_flag = true;
+                }
+            }
+            if (search_flag)
+            {
+                find_kdtree((x << 1) + 1,request_lon, request_lat);
+            }
+        }
+    }
+    else
+    {
+        if(kdtree[x].right)
+        {
+            find_kdtree((x << 1) + 1,request_lon, request_lat);
+        }
+        if(kdtree[x].left)
+        {
+            if(kdans.size() < 10)
+            {
+                search_flag = true;
+            }
+            else
+            {
+                std::set<kdpoint>::reverse_iterator it = kdans.rbegin();
+                kdpoint temp = *it;
+                 int dist2 = (temp.p[0] - search_point.p[0]) * (temp.p[0] - search_point.p[0]) + (temp.p[1] - search_point.p[1]) * (temp.p[1] - search_point.p[1]);
+                if(dist1 <= dist2)
+                {
+                    search_flag = true;
+                }
+            }
+            if(search_flag)
+            {
+                find_kdtree(x << 1,request_lon, request_lat);
+            }
+        }
+    }
+}
+
+void find_one_interest(uint32_t requested_lon, uint32_t requested_lat)
+{
+    time_t time;
+    
+    kdans.clear();
+    time = clock();
+    find_one_qtree(&qtree, requested_lon, requested_lat);
+    printf("%f\n",(float)(clock() - time) / CLOCKS_PER_SEC );
+    
+    /*time = clock();
+    find_one_qtree_point(&qtree_point, requested_lon, requeseted_lat);
+    printf("%f\n",(float)(clock() - time) / CLOCKS_PER_SEC );*/
+    
+    time = clock();
+    find_kdtree(1, requested_lon, requested_lat);
+    printf("%f\n",(float)(clock() - time) / CLOCKS_PER_SEC );
+    std::set<kdpoint>::iterator to_draw = kdans.begin();
+    cv::circle(map_image, cv::Point(to_draw->p[0], to_draw->p[1]), 4, BLUE, -1);
+    printf("Amenity type : %s\n", &(to_draw->name[0]));
+    double temp_dist = std::sqrt((to_draw->p[0] - requested_lon) * (to_draw->p[0] - requested_lon) + (to_draw->p[1] - requested_lat) * (to_draw->p[1] - requested_lat)) * 111000 / BIGINT / zoom_scale;
+    printf("Amenity type : %s\tdistance : %lf meters\n", &(to_draw->name[0]), temp_dist);
+
+    output();
+    cv::circle(map_image, cv::Point(to_draw->p[0], to_draw->p[1]), 4, WHITE, -1);
+    map_pause();
+}
+
+void find_range_kdtree(uint32_t requested_lon, uint32_t requested_lat)
+{
+    time_t time = clock();
+    find_kdtree(1, requested_lon, requested_lat);
+    printf("%f\n",(float)(clock() - time) / CLOCKS_PER_SEC );
+    for(std::set<kdpoint>::iterator to_draw = kdans.begin(); to_draw != kdans.end(); ++to_draw)
+    {
+        cv::circle(map_image, cv::Point(to_draw->p[0], to_draw->p[1]), 4, BLUE, -1);
+        double dist = std::sqrt((to_draw->p[0] - requested_lon) * (to_draw->p[0] - requested_lon) + (to_draw->p[1] - requested_lat) * (to_draw->p[1] - requested_lat)) * 111000 / BIGINT / zoom_scale;
+        printf("Amenity type : %s\t%lf meters\n", &(to_draw->name[0]), dist);
+    }
+    output();
+    for(std::set<kdpoint>::iterator to_draw = kdans.begin(); to_draw != kdans.end(); ++to_draw)
+    {
+        cv::circle(map_image, cv::Point(to_draw->p[0], to_draw->p[1]), 4, WHITE, -1);
+    }
+    map_pause();
+}
+
+void find_range(uint32_t requested_lon, uint32_t requested_lat)
+{
+    kdans.clear();
+    find_range_kdtree(requested_lon, requested_lat);
 }
