@@ -13,7 +13,7 @@
 pugi::xml_document shmap;
 double minlat,minlon,maxlat,maxlon;
 
-points_info points[510000];
+//points_info points[510000];
 point points_origin[510000];
 std::vector<std::pair<std::string, pugi::xml_node> > points_name;
 std::map<uint32_t,uint32_t> points_map;

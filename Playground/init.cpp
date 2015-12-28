@@ -282,9 +282,10 @@ void get_node(pugi::xml_node *now)
     temp1 = (templon - minlon) * BIGINT * zoom_scale;
     temp_point = std::make_pair(temp1, temp2);
     points_map[id] = points_num;
-    points[points_num].node = now;
+    //points[points_num].node = now;
     points_origin[points_num] = temp_point;
-    points[points_num++].loc = temp_point;
+    //points[points_num].loc = temp_point;
+    points_num++;
     
     pugi::xml_node temp_last = now->last_child();
     for (pugi::xml_node temp = now->first_child(); temp != temp_last; temp = temp.next_sibling())
@@ -341,17 +342,17 @@ void get_way(pugi::xml_node *now)
         {
             uint32_t temp_points_loc = points_map[temp.attribute("ref").as_uint()];
             
-            points[temp_points_loc].way.push_back(temp);
+            //points[temp_points_loc].way.push_back(temp);
             
             if (temp == now->first_child())
             {
-                joint1 = points[temp_points_loc].loc;
+                joint1 = points_origin[temp_points_loc];
                 s1 = temp_points_loc;
                 continue;
             }
             else
             {
-                joint2 = points[temp_points_loc].loc;
+                joint2 = points_origin[temp_points_loc];
                 s2 = temp_points_loc;
                 
                 double temp_distance = std::sqrt((joint2.first - joint1.first) * (joint2.first - joint1.first) + (joint2.second - joint1.second) * (joint2.second - joint1.second));
@@ -403,12 +404,12 @@ void redraw(pugi::xml_node *now)
             
             if (temp == now->first_child())
             {
-                joint1 = points[temp_points_loc].loc;
+                joint1 = points_origin[temp_points_loc];
                 continue;
             }
             else
             {
-                joint2 = points[temp_points_loc].loc;
+                joint2 = points_origin[temp_points_loc];
                 draw_line(map_image, cv::Point(joint1.first,joint1.second), cv::Point(joint2.first,joint2.second), WHITE, 2);
                 joint1 = joint2;
             }
@@ -432,7 +433,7 @@ void init()
     //time_t time = std::time(NULL);
     clock_t time = clock();
     
-    memset(points, 0, sizeof(points));
+    //memset(points, 0, sizeof(points));
     memset(points_origin, 0, sizeof(points_origin));
     points_name.clear();
     points_map.clear();

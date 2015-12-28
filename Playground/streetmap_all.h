@@ -75,7 +75,7 @@ struct kdpoint
 extern pugi::xml_document shmap;
 extern double minlat,minlon,maxlat,maxlon;
 
-extern points_info points[510000];
+//extern points_info points[510000];
 extern point points_origin[510000];
 extern std::vector<std::pair<std::string, pugi::xml_node> > points_name;
 extern std::map<uint32_t,uint32_t> points_map;

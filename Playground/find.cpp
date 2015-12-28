@@ -573,8 +573,7 @@ void find_kdtree(int x, uint32_t request_lon, uint32_t request_lat)
     kdans.insert(temp_add_ans);
     if (kdans.size() > 10)
     {
-        std::set<kdpoint>::reverse_iterator it = kdans.rbegin();
-        kdans.erase(*it);
+        kdans.erase(*kdans.rbegin());
     }
     
     if(!kdtree[x].left && !kdtree[x].right)
@@ -601,8 +600,7 @@ void find_kdtree(int x, uint32_t request_lon, uint32_t request_lat)
             }
             else
             {
-                std::set<kdpoint>::reverse_iterator it = kdans.rbegin();
-                kdpoint temp = *it;
+                kdpoint temp = *kdans.rbegin();
                 int dist2 = (temp.p[0] - search_point.p[0]) * (temp.p[0] - search_point.p[0]) + (temp.p[1] - search_point.p[1]) * (temp.p[1] - search_point.p[1]);
                 if (dist1 <= dist2)
                 {
@@ -629,8 +627,7 @@ void find_kdtree(int x, uint32_t request_lon, uint32_t request_lat)
             }
             else
             {
-                std::set<kdpoint>::reverse_iterator it = kdans.rbegin();
-                kdpoint temp = *it;
+                kdpoint temp = *kdans.rbegin();
                  int dist2 = (temp.p[0] - search_point.p[0]) * (temp.p[0] - search_point.p[0]) + (temp.p[1] - search_point.p[1]) * (temp.p[1] - search_point.p[1]);
                 if(dist1 <= dist2)
                 {
